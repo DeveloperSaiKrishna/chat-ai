@@ -9,9 +9,9 @@ import {
 
 import { Plus, Send } from "lucide-react";
 
-import MarkdownRenderer from "./components/CodeBlock";
-import ModelsContianer from "./components/ModelsContainer";
-import ChatList from "./components/ChatList";
+import MarkdownRenderer from "../../components/CodeBlock";
+import ModelsContianer from "../../components/ModelsContainer";
+import ChatList from "../../components/ChatList";
 
 type ChatsType = {
   id: number;
@@ -109,7 +109,7 @@ export const ChatWindow = ({
     }
 
     try {
-      const res = await fetch("http://localhost:8000/chat", {
+      const res = await fetch("http://localhost:8000/lang", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -169,6 +169,9 @@ export const ChatWindow = ({
         {/* Messages */}
 
         <div className="flex-1 overflow-y-auto p-6 pb-40">
+          <h1 className="text-center mb-2 text-2xl font-bold">
+            LangChain with Session Memory
+          </h1>
           <p className="leading-8 text-gray-900">
             {chats.length > 0
               ? chats.map((chat) => (
@@ -256,7 +259,7 @@ export const ChatWindow = ({
 const initialId = Date.now();
 const initialModel = "llama3";
 
-const Chat = () => {
+const LangChainChat = () => {
   const [chatWindows, setChatWindows] = useState<ChatWindowType[]>([
     {
       id: initialId,
@@ -311,4 +314,4 @@ const Chat = () => {
   );
 };
 
-export default Chat;
+export default LangChainChat;
