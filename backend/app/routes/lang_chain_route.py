@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
 from app.models.chat_model import ChatRequest
-from app.services.chat_service import stream_chat_response
+from app.services.lang_chain_service import stream_chat_response
 
 router = APIRouter(prefix="/lang", tags=["Lang"])
 
