@@ -13,4 +13,4 @@ async def chat(req: ChatRequest):
         async for chunk in stream_chat_response(req):
             yield chunk
 
-    return StreamingResponse(event_generator(), media_type="text/even-stream")
+    return StreamingResponse(event_generator(), media_type="text/event-stream")

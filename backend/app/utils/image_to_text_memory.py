@@ -1,0 +1,15 @@
+memory = {}
+
+
+def get_history(session_id):
+    return memory.get(session_id, [])
+
+
+def save_message(session_id, message):
+    if session_id not in memory:
+        memory[session_id] = []
+
+    memory[session_id].append(message)
+
+    # keep last 20 messages
+    memory[session_id] = memory[session_id][-20:]

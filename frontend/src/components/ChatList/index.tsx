@@ -1,12 +1,14 @@
 import { type Dispatch, type SetStateAction } from "react";
 import type { ChatWindowType } from "../../Chat";
-import { CircleX } from "lucide-react";
+import { CircleX, X } from "lucide-react";
 
 type ChatListTypes = {
   chatWindows: ChatWindowType[];
   setChatWindows: Dispatch<SetStateAction<ChatWindowType[]>>;
   activeChatWindowId: number;
   setActiveChatWindowId: Dispatch<SetStateAction<number>>;
+  isMobile?: boolean;
+  onClose?: () => void;
 };
 
 const ChatList = ({
@@ -14,6 +16,7 @@ const ChatList = ({
   setChatWindows,
   activeChatWindowId,
   setActiveChatWindowId,
+  onClose
 }: ChatListTypes) => {
   const handleNewChat = () => {
     const id = Date.now();
@@ -50,11 +53,19 @@ const ChatList = ({
   };
 
   return (
-    <div className="flex h-full w-[20vw] flex-col gap-4 border-r border-gray-200 p-4">
+    <div className={`flex h-full flex-col gap-4 border-r border-gray-200 p-4`}>
       {/* Header */}
 
-      <div className="flex items-center justify-between">
-        <h3 className="text-xl font-semibold">Chat AI</h3>
+      <div className="flex flex-col justify-between">
+
+        <div className="flex justify-between mb-2">
+          <h3 className="text-xl font-semibold">Chat AI</h3>
+
+          <button className="md:hidden" onClick={onClose}>
+            <X />
+          </button>
+        </div>
+
 
         <button
           onClick={handleNewChat}
@@ -70,14 +81,14 @@ const ChatList = ({
         {chatWindows.map((chat) => (
           <li
             key={chat.id}
-            className={`flex cursor-pointer items-center justify-between rounded-md p-3 transition ${
-              chat.id === activeChatWindowId
-                ? "bg-slate-300"
-                : "bg-gray-100 hover:bg-gray-200"
-            } `}
+            className={`flex cursor-pointer items-center justify-between rounded-md p-3 transition ${chat.id === activeChatWindowId
+              ? "bg-slate-300"
+              : "bg-gray-100 hover:bg-gray-200"
+              } `}
             onClick={() => setActiveChatWindowId(chat.id)}
           >
-            <div className="truncate text-sm font-medium">Chat {chat.id}</div>
+            {/* <div className="truncate text-sm font-medium">Chat {chat.id}</div> */}
+            <div className="truncate text-sm font-medium">Chat</div>
 
             <button
               onClick={(e) => {

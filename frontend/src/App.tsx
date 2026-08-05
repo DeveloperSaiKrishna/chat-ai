@@ -3,6 +3,7 @@ import LangChainChat from "./pages/LangChainChat";
 import Chat from "./Chat";
 import HealthAI from "./pages/HealthAI";
 import NoteSearch from "./pages/NoteSearch";
+import ImageToText from "./pages/ImageToText";
 
 const App = () => {
   return (
@@ -12,6 +13,7 @@ const App = () => {
         <Route path="/langchain-chat" element={<LangChainChat />} />
         <Route path="/health-chat" element={<HealthAI />} />
         <Route path="/notes-search" element={<NoteSearch />} />
+        <Route path="/image-to-text" element={<ImageToText />} />
       </Routes>
     </BrowserRouter>
   );

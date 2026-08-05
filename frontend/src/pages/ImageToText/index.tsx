@@ -7,12 +7,11 @@ import {
   type SetStateAction,
 } from "react";
 
-import { Plus, Send } from "lucide-react";
-import { Menu, PanelRightOpen } from "lucide-react";
+import { Plus, Send, XIcon } from "lucide-react";
 
-import MarkdownRenderer from "./components/CodeBlock";
-import ModelsContianer from "./components/ModelsContainer";
-import ChatList from "./components/ChatList";
+import MarkdownRenderer from "../../components/CodeBlock";
+import ModelsContianer from "../../components/ModelsContainer";
+import ChatList from "../../components/ChatList";
 
 type ChatsType = {
   id: number;
@@ -31,8 +30,6 @@ type ChatWindowProps = {
   chats: ChatsType[];
   setChatWindows: Dispatch<SetStateAction<ChatWindowType[]>>;
   selectedModel: string;
-  onOpenLeftSidebar: () => void;
-  onOpenRightSidebar: () => void;
 };
 
 export const ChatWindow = ({
@@ -40,13 +37,12 @@ export const ChatWindow = ({
   chats,
   setChatWindows,
   selectedModel,
-  onOpenLeftSidebar,
-  onOpenRightSidebar
 }: ChatWindowProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [showSendBtn, setShowSendBtn] = useState<boolean>(false);
+  const [imagePreview, setImagePreview] = useState("");
 
   const handleInput = () => {
     const textarea = textareaRef.current;
@@ -70,23 +66,15 @@ export const ChatWindow = ({
 
     if (!file) return;
 
-    const formData = new FormData();
-    formData.append("file", file);
+    // create local preview URL
+    const previewUrl = URL.createObjectURL(file);
 
-    try {
-      const res = await fetch("http://localhost:8000/upload", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      console.log("Uploaded:", data);
-    } catch (err) {
-      console.log(err);
-    }
+    setImagePreview(previewUrl);
   };
 
   const handleSend = async () => {
     const message = textareaRef.current?.value.trim();
+    const file = fileInputRef.current?.files?.[0];
 
     if (!message) return;
 
@@ -101,9 +89,9 @@ export const ChatWindow = ({
       prev.map((window) =>
         window.id === id
           ? {
-            ...window,
-            chats: [...window.chats, newChat],
-          }
+              ...window,
+              chats: [...window.chats, newChat],
+            }
           : window,
       ),
     );
@@ -113,17 +101,30 @@ export const ChatWindow = ({
       textareaRef.current.style.height = "auto";
     }
 
+    const formData = new FormData();
+
+    formData.append("session_id", `${id}`);
+    formData.append("message", message);
+    formData.append("model", selectedModel);
+
+    if (file) {
+      formData.append("image", file);
+    }
+
     try {
-      const res = await fetch("http://localhost:8000/chat", {
+      handleFileRemove();
+      const res = await fetch("http://localhost:8000/image-to-text", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: message,
-          model: selectedModel,
-          session_id: id,
-        }),
+        // headers: {
+        //   "Content-Type": "application/json",
+        // },
+        body: formData,
+        // body: JSON.stringify({
+        //   message: message,
+        //   model: selectedModel,
+        //   session_id: id,
+        //   image: file,
+        // }),
       });
 
       const reader = res.body?.getReader();
@@ -168,51 +169,68 @@ export const ChatWindow = ({
     }
   };
 
+  const handleFileRemove = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
+    setImagePreview("");
+  };
+
   return (
     <>
-      <div className="flex h-full w-full md:w-[60vw] flex-col">
+      <div className="flex h-full w-[60vw] flex-col">
         {/* Messages */}
-        <div className="flex items-center justify-between border-b border-gray-300 p-4 md:hidden">
-          <button onClick={onOpenLeftSidebar}>
-            <Menu />
-          </button>
-
-          <h2 className="font-semibold">Chat AI</h2>
-
-          <button onClick={onOpenRightSidebar}>
-            <PanelRightOpen />
-          </button>
-        </div>
 
         <div className="flex-1 overflow-y-auto p-6 pb-40">
-          <p className="leading-8 text-gray-900">
+          <h1 className="text-center mb-2 text-2xl font-bold">
+            Image to Text AI
+          </h1>
+          <div className="leading-8 text-gray-900">
             {chats.length > 0
               ? chats.map((chat) => (
-                <div key={chat.id}>
-                  {/* Question */}
+                  <div key={chat.id}>
+                    {/* Question */}
 
-                  <div className="mb-4 flex justify-end">
-                    <div className="w-fit md:max-w-[30vw] rounded-lg bg-gray-100 px-4 py-2 text-right">
-                      {chat.q}
+                    <div className="mb-4 flex justify-end">
+                      <div className="w-fit max-w-[30vw] rounded-lg bg-gray-100 px-4 py-2 text-right">
+                        {chat.q}
+                      </div>
+                    </div>
+
+                    {/* Answer */}
+
+                    <div className="mb-4 flex">
+                      <div className="w-fit max-w-full rounded-lg px-4 py-4 text-left">
+                        <MarkdownRenderer content={chat.a || "Loading..."} />
+                      </div>
                     </div>
                   </div>
-
-                  {/* Answer */}
-
-                  <div className="mb-4 flex">
-                    <div className="w-fit max-w-full rounded-lg px-4 py-4 text-left">
-                      <MarkdownRenderer content={chat.a || "Loading..."} />
-                    </div>
-                  </div>
-                </div>
-              ))
+                ))
               : "Chat here..."}
-          </p>
+          </div>
         </div>
 
         {/* Input */}
-
-        <div className="fixed bottom-0 w-full md:w-[60vw] bg-white p-4">
+        {imagePreview && (
+          <div className="relative group bottom-23 left-5">
+            <XIcon
+              className="absolute w-5 h-5 left-13 top-2 cursor-pointer rounded bg-amber-50/90 hover:bg-amber-50"
+              onClick={handleFileRemove}
+            />
+            <img
+              src={imagePreview}
+              alt="preview"
+              className="
+                w-20 h-20
+                object-cover
+                rounded-2xl
+                border border-gray-200
+              "
+            />
+          </div>
+        )}
+        <div className="fixed bottom-0 w-[60vw] bg-white p-4">
           <div className="flex items-center gap-3 rounded-3xl border border-slate-300 bg-white px-2 py-2 shadow-lg">
             {/* hidden file input */}
 
@@ -246,7 +264,7 @@ export const ChatWindow = ({
                   handleSend();
                 }
               }}
-              placeholder="Message ChatAI..."
+              placeholder="Message ChatGPT..."
               className="max-h-52 w-full flex-1 resize-none overflow-y-auto bg-transparent outline-none placeholder:text-gray-400"
             />
 
@@ -270,9 +288,9 @@ export const ChatWindow = ({
 };
 
 const initialId = Date.now();
-const initialModel = "llama3";
+const initialModel = "qwen2.5vl:latest";
 
-const Chat = () => {
+const ImageToText = () => {
   const [chatWindows, setChatWindows] = useState<ChatWindowType[]>([
     {
       id: initialId,
@@ -282,41 +300,18 @@ const Chat = () => {
   ]);
   const [activeChatWindowId, setActiveChatWindowId] = useState(initialId);
 
-  const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
-  const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
-
   const activeChat = useMemo(() => {
     return chatWindows.find(({ id }) => id === activeChatWindowId);
   }, [chatWindows, activeChatWindowId]);
 
   return (
     <div className="flex h-screen">
-      {(leftSidebarOpen || rightSidebarOpen) && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 md:hidden"
-          onClick={() => {
-            setLeftSidebarOpen(false);
-            setRightSidebarOpen(false);
-          }}
-        />
-      )}
-
-      <div
-        className={`
-    fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-lg
-    transform transition-transform duration-300
-    ${leftSidebarOpen ? "translate-x-0" : "-translate-x-full"}
-    md:static md:translate-x-0 md:shadow-none md:w-[20vw] 
-  `}
-      >
-        <ChatList
-          chatWindows={chatWindows}
-          setChatWindows={setChatWindows}
-          activeChatWindowId={activeChatWindowId}
-          setActiveChatWindowId={setActiveChatWindowId}
-          onClose={() => setLeftSidebarOpen(false)}
-        />
-      </div>
+      <ChatList
+        chatWindows={chatWindows}
+        setChatWindows={setChatWindows}
+        activeChatWindowId={activeChatWindowId}
+        setActiveChatWindowId={setActiveChatWindowId}
+      />
 
       {activeChat && (
         <ChatWindow
@@ -325,40 +320,29 @@ const Chat = () => {
           chats={activeChat.chats}
           setChatWindows={setChatWindows}
           selectedModel={activeChat.model}
-          onOpenLeftSidebar={() => setLeftSidebarOpen(true)}
-          onOpenRightSidebar={() => setRightSidebarOpen(true)}
         />
       )}
 
       {activeChat && (
-        <div
-          className={`
-    fixed inset-y-0 right-0 z-50 w-72 bg-white shadow-lg
-    transform transition-transform duration-300
-    ${rightSidebarOpen ? "translate-x-0" : "translate-x-full"}
-    md:static md:translate-x-0 md:shadow-none md:w-[20vw]
-  `}
-        >
-          <ModelsContianer
-            selectedModel={activeChat.model}
-            onSelectModel={(model) => {
-              setChatWindows((pre) =>
-                pre.map((window) => {
-                  if (window.id === activeChat.id) {
-                    return {
-                      ...window,
-                      model: model,
-                    };
-                  }
-                  return window;
-                }),
-              );
-            }}
-          />
-        </div>
+        <ModelsContianer
+          selectedModel={activeChat.model}
+          onSelectModel={(model) => {
+            setChatWindows((pre) =>
+              pre.map((window) => {
+                if (window.id === activeChat.id) {
+                  return {
+                    ...window,
+                    model: model,
+                  };
+                }
+                return window;
+              }),
+            );
+          }}
+        />
       )}
     </div>
   );
 };
 
-export default Chat;
+export default ImageToText;
