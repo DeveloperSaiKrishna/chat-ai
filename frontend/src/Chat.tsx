@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -8,6 +9,7 @@ import {
 } from "react";
 
 import { Plus, Send } from "lucide-react";
+import { Menu, PanelRightOpen } from "lucide-react";
 
 import MarkdownRenderer from "./components/CodeBlock";
 import ModelsContianer from "./components/ModelsContainer";
@@ -30,6 +32,8 @@ type ChatWindowProps = {
   chats: ChatsType[];
   setChatWindows: Dispatch<SetStateAction<ChatWindowType[]>>;
   selectedModel: string;
+  onOpenLeftSidebar: () => void;
+  onOpenRightSidebar: () => void;
 };
 
 export const ChatWindow = ({
@@ -37,11 +41,21 @@ export const ChatWindow = ({
   chats,
   setChatWindows,
   selectedModel,
+  onOpenLeftSidebar,
+  onOpenRightSidebar
 }: ChatWindowProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [showSendBtn, setShowSendBtn] = useState<boolean>(false);
+
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({
+      behavior: "smooth",
+    });
+  }, [chats]);
 
   const handleInput = () => {
     const textarea = textareaRef.current;
@@ -96,9 +110,9 @@ export const ChatWindow = ({
       prev.map((window) =>
         window.id === id
           ? {
-              ...window,
-              chats: [...window.chats, newChat],
-            }
+            ...window,
+            chats: [...window.chats, newChat],
+          }
           : window,
       ),
     );
@@ -165,18 +179,31 @@ export const ChatWindow = ({
 
   return (
     <>
-      <div className="flex h-full w-[60vw] flex-col">
+      <div className="flex h-full w-full md:w-[60vw] flex-col">
         {/* Messages */}
+        <div className="flex items-center justify-between border-b border-gray-300 p-4 md:hidden">
+          <button onClick={onOpenLeftSidebar}>
+            <Menu />
+          </button>
+
+          <h2 className="font-semibold">Chat AI</h2>
+
+          <button onClick={onOpenRightSidebar}>
+            <PanelRightOpen />
+          </button>
+        </div>
 
         <div className="flex-1 overflow-y-auto p-6 pb-40">
-          <h1 className="leading-8 text-gray-900">
+          <p className="leading-8 text-gray-900">
             {chats.length > 0
               ? chats.map((chat) => (
+                <>
+
                   <div key={chat.id}>
                     {/* Question */}
 
                     <div className="mb-4 flex justify-end">
-                      <div className="w-fit max-w-[30vw] rounded-lg bg-gray-100 px-4 py-2 text-right">
+                      <div className="w-fit md:max-w-[30vw] rounded-lg bg-gray-100 px-4 py-2 text-right">
                         {chat.q}
                       </div>
                     </div>
@@ -189,14 +216,16 @@ export const ChatWindow = ({
                       </div>
                     </div>
                   </div>
-                ))
+                  <div ref={bottomRef} />
+                </>
+              ))
               : "Chat here..."}
-          </h1>
+          </p>
         </div>
 
         {/* Input */}
 
-        <div className="fixed bottom-0 w-[60vw] bg-white p-4">
+        <div className="fixed bottom-0 w-full md:w-[60vw] bg-white p-4">
           <div className="flex items-center gap-3 rounded-3xl border border-slate-300 bg-white px-2 py-2 shadow-lg">
             {/* hidden file input */}
 
@@ -230,7 +259,7 @@ export const ChatWindow = ({
                   handleSend();
                 }
               }}
-              placeholder="Message ChatGPT..."
+              placeholder="Message ChatAI..."
               className="max-h-52 w-full flex-1 resize-none overflow-y-auto bg-transparent outline-none placeholder:text-gray-400"
             />
 
@@ -266,18 +295,41 @@ const Chat = () => {
   ]);
   const [activeChatWindowId, setActiveChatWindowId] = useState(initialId);
 
+  const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
+  const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
+
   const activeChat = useMemo(() => {
     return chatWindows.find(({ id }) => id === activeChatWindowId);
   }, [chatWindows, activeChatWindowId]);
 
   return (
     <div className="flex h-screen">
-      <ChatList
-        chatWindows={chatWindows}
-        setChatWindows={setChatWindows}
-        activeChatWindowId={activeChatWindowId}
-        setActiveChatWindowId={setActiveChatWindowId}
-      />
+      {(leftSidebarOpen || rightSidebarOpen) && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          onClick={() => {
+            setLeftSidebarOpen(false);
+            setRightSidebarOpen(false);
+          }}
+        />
+      )}
+
+      <div
+        className={`
+    fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-lg
+    transform transition-transform duration-300
+    ${leftSidebarOpen ? "translate-x-0" : "-translate-x-full"}
+    md:static md:translate-x-0 md:shadow-none md:w-[20vw] 
+  `}
+      >
+        <ChatList
+          chatWindows={chatWindows}
+          setChatWindows={setChatWindows}
+          activeChatWindowId={activeChatWindowId}
+          setActiveChatWindowId={setActiveChatWindowId}
+          onClose={() => setLeftSidebarOpen(false)}
+        />
+      </div>
 
       {activeChat && (
         <ChatWindow
@@ -286,26 +338,37 @@ const Chat = () => {
           chats={activeChat.chats}
           setChatWindows={setChatWindows}
           selectedModel={activeChat.model}
+          onOpenLeftSidebar={() => setLeftSidebarOpen(true)}
+          onOpenRightSidebar={() => setRightSidebarOpen(true)}
         />
       )}
 
       {activeChat && (
-        <ModelsContianer
-          selectedModel={activeChat.model}
-          onSelectModel={(model) => {
-            setChatWindows((pre) =>
-              pre.map((window) => {
-                if (window.id === activeChat.id) {
-                  return {
-                    ...window,
-                    model: model,
-                  };
-                }
-                return window;
-              }),
-            );
-          }}
-        />
+        <div
+          className={`
+    fixed inset-y-0 right-0 z-50 w-72 bg-white shadow-lg
+    transform transition-transform duration-300
+    ${rightSidebarOpen ? "translate-x-0" : "translate-x-full"}
+    md:static md:translate-x-0 md:shadow-none md:w-[20vw]
+  `}
+        >
+          <ModelsContianer
+            selectedModel={activeChat.model}
+            onSelectModel={(model) => {
+              setChatWindows((pre) =>
+                pre.map((window) => {
+                  if (window.id === activeChat.id) {
+                    return {
+                      ...window,
+                      model: model,
+                    };
+                  }
+                  return window;
+                }),
+              );
+            }}
+          />
+        </div>
       )}
     </div>
   );
